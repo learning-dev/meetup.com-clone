@@ -1,32 +1,17 @@
 import secrets
 import os
 from PIL import Image
-from flask import Flask, render_template, url_for, flash, redirect, request
+from flask import Flask, render_template, url_for, flash, redirect, request, abort
 from meetup_app import app, bcrypt
-from meetup_app.forms import RegistrationForm, LoginForm, UpdateAccountForm
+from meetup_app.forms import RegistrationForm, LoginForm, UpdateAccountForm, MeetupForm
 from meetup_app.models import User, Meetup, db
 from flask_login import login_user, current_user, logout_user, login_required
 
-posts = [
-	{
-	'organizer': 'Corey Scafer',
-	'meetup_name': 'First Meetup',
-	'content': 'Meetup is at white Field',
-	'date_posted': 'April 2020',
-	},
-
-	{
-	'organizer': 'Corey Scafer',
-	'meetup_name': 'First Meetup',
-	'content': 'Meetup is at Bellundur',
-	'date_posted': 'April 2020',
-	}
-
-]
 
 @app.route("/")
 @app.route("/home")
 def home():
+	posts = Meetup.query.all()
 	return render_template('home.html', posts=posts)
 
 
@@ -105,3 +90,56 @@ def account():
 	img_file = url_for('static', filename='profile_pics/' + current_user.image_file)
 	return render_template('account.html', title='Account',
 							image_file=img_file, form=form)
+
+
+@app.route("/post/new", methods=['GET', 'POST'])
+@login_required
+def new_post():
+	form = MeetupForm()
+	if form.validate_on_submit():
+		post = Meetup(meetup_name=form.title.data, details=form.details.data,
+					organizer=current_user)
+		db.session.add(post)
+		db.session.commit()
+		flash('Your post have been created.', 'success')
+		return redirect(url_for('home'))
+	return render_template('create_post.html', meetup_name='New Meetup',
+	 	form=form, legend='New Meetup')
+
+@app.route("/post/<int:meetup_id>")
+def post(meetup_id):
+	meetup = Meetup.query.get_or_404(meetup_id)
+	return render_template('post.html', title=meetup.meetup_name, post=meetup)
+
+
+@app.route("/post/<int:meetup_id>/update", methods=['GET', 'POST'])
+@login_required
+def update_post(meetup_id):
+	meetup = Meetup.query.get_or_404(meetup_id)
+	if meetup.organizer != current_user:
+		abort(403)
+	form = MeetupForm()
+	if form.validate_on_submit():
+		meetup.meetup_name = form.title.data
+		meetup.details = form.details.data
+		db.session.commit()
+		flash('Your Meetup has been Updated!', 'success')
+		return redirect(url_for('post', meetup_id=meetup.id))
+	elif request.method == 'GET':
+		form.title.data = meetup.meetup_name
+		form.details.data = meetup.details
+	return render_template('create_post.html', meetup_name='Update Meetup',
+						form=form, legend='Update Meetup')
+
+
+@app.route("/delet/<int:meetup_id>/delete", methods=['POST'])
+@login_required
+def delete_post(meetup_id):
+	meetup = Meetup.query.get_or_404(meetup_id)
+	if meetup.organizer != current_user:
+		abort(403)
+	db.session.delete(meetup)
+	db.session.commit()
+	flash('Your Meetup has been deleted!', 'success')
+	return redirect(url_for('home'))
+
