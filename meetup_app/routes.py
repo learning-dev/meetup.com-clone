@@ -7,6 +7,19 @@ from meetup_app.forms import RegistrationForm, LoginForm, UpdateAccountForm, Mee
 from meetup_app.models import User, Meetup, db
 from flask_login import login_user, current_user, logout_user, login_required
 
+def get_attendees(meetup_obj):
+	list_of_attendees = []
+	user_ids = [user_id for user_id in meetup_obj.attendees\
+				 if user_id != ' ']
+
+	for user_id in user_ids:
+		user = User.query.get(user_id)
+		list_of_attendees.append(user)
+	print(list_of_attendees)
+
+	return list_of_attendees
+
+
 
 @app.route("/")
 @app.route("/home")
@@ -98,7 +111,7 @@ def new_post():
 	form = MeetupForm()
 	if form.validate_on_submit():
 		post = Meetup(meetup_name=form.title.data, details=form.details.data,
-					organizer=current_user)
+					attendees=current_user, organizer=current_user)
 		db.session.add(post)
 		db.session.commit()
 		flash('Your post have been created.', 'success')
@@ -109,7 +122,9 @@ def new_post():
 @app.route("/post/<int:meetup_id>")
 def post(meetup_id):
 	meetup = Meetup.query.get_or_404(meetup_id)
-	return render_template('post.html', title=meetup.meetup_name, post=meetup)
+	list_of_attendees = get_attendees(meetup)
+	return render_template('post.html', title=meetup.meetup_name,
+						post=meetup, attendees=list_of_attendees )
 
 
 @app.route("/post/<int:meetup_id>/update", methods=['GET', 'POST'])
@@ -132,7 +147,7 @@ def update_post(meetup_id):
 						form=form, legend='Update Meetup')
 
 
-@app.route("/delet/<int:meetup_id>/delete", methods=['POST'])
+@app.route("/post/<int:meetup_id>/delete", methods=['POST'])
 @login_required
 def delete_post(meetup_id):
 	meetup = Meetup.query.get_or_404(meetup_id)
@@ -142,4 +157,20 @@ def delete_post(meetup_id):
 	db.session.commit()
 	flash('Your Meetup has been deleted!', 'success')
 	return redirect(url_for('home'))
+
+
+@app.route("/post/<int:meetup_id>/attend/", methods=['GET', 'POST'])
+@login_required
+def attend_meetup(meetup_id):
+
+	meetup = Meetup.query.get_or_404(meetup_id)
+	attendee = str(current_user.id)
+
+	if attendee not in meetup.attendees:
+	 	meetup.attendees = meetup.attendees + ' ' + attendee
+
+	db.session.add(meetup)
+	db.session.commit()
+	flash('You have joined the meetup!', 'success')
+	return render_template('post.html', title=meetup.meetup_name, post=meetup)
 

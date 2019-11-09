@@ -11,13 +11,24 @@
 		      		<a class="btn btn-secondary btn-sm mt-1 mb-1" href="{{ url_for('update_post', meetup_id=post.id) }}">Update Meetup</a>
 		      		<button type="button" class="btn btn-danger btn-sm m-1"data-toggle="modal" data-target="#deleteModal">Delete</button>
 		      	</div>
+		      {% else %}
+			      <button type="button" class="btn btn-primary btn-sm mt-1 mb-1" data-toggle="modal" data-target="#joinModal">Join Meetup</button>
 		      {% endif %}
 		    </div>
 		    <h2><a class="article-title" href="{{ url_for('post', meetup_id=post.id)}}">{{ post.meetup_name }}</a></h2>
 		    <p class="article-content">{{ post.details }}</p>
+		    <p class="article-content"><b>List of People Attending the meetup</b></p>
+		     {% if attendees %}
+			    <ul>
+			    	{% for attendee in attendees %}
+			    		<li class="article-content">{{ attendee.username }}</li>
+			    	{% endfor %}
+			    </ul>
+		   {% endif %}
 		  </div>
 	</article>
-	<!-- Modal -->
+
+	<!-- Delete Modal -->
 	<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
 	  <div class="modal-dialog" role="document">
 	    <div class="modal-content">
@@ -36,4 +47,25 @@
 	    </div>
 	  </div>
 	</div>
+
+	<!-- Join Modal -->
+	<div class="modal fade" id="joinModal" tabindex="-1" role="dialog" aria-labelledby="joinModalLabel" aria-hidden="true">
+	  <div class="modal-dialog" role="document">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <h5 class="modal-title" id="joinModalLabel">Join Meetup?</h5>
+	        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+	          <span aria-hidden="true">&times;</span>
+	        </button>
+	      </div>
+	      <div class="modal-footer">
+	        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+	        <form action="{{ url_for('attend_meetup', meetup_id=post.id) }}" method="POST">
+	        	<input class="btn btn-primary" type="submit" value="Join Meetup">
+	        </form>
+	      </div>
+	    </div>
+	  </div>
+	</div>
+
 {% endblock content %}
