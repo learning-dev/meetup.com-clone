@@ -111,7 +111,7 @@ def new_post():
 	form = MeetupForm()
 	if form.validate_on_submit():
 		post = Meetup(meetup_name=form.title.data, details=form.details.data,
-					attendees=current_user, organizer=current_user)
+					attendees=str(current_user.id), organizer=current_user)
 		db.session.add(post)
 		db.session.commit()
 		flash('Your post have been created.', 'success')
